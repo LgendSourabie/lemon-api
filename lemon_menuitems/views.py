@@ -5,6 +5,10 @@ from rest_framework import generics
 from lemon_menuitems.permissions import IsManagerOrNot, IsSingleManagerOrNot, IsCustomerOrNot, IsSingleCustomerOrNot
 from django.http import Http404
 from rest_framework import status
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
+from lemon_menuitems.paginations import MenuItemPagination
+from lemon_menuitems.filters import MenuItemFilter
 from rest_framework.response import Response
 # Create your views here.
 
@@ -12,11 +16,16 @@ from rest_framework.response import Response
 class MenuItemView(generics.ListCreateAPIView):
     queryset = MenuItem.objects.all()
     serializer_class = MenuItemSerializer
+    filter_backends = [DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter]
+    filterset_class = MenuItemFilter
+    pagination_class = MenuItemPagination
+    search_fields = ['title','category']
+    ordering_fields = ['price']
     permission_classes = [IsManagerOrNot]
 
     
 
-class SingleMenuItemView(generics.ListCreateAPIView):
+class SingleMenuItemView(generics.RetrieveUpdateDestroyAPIView):
     queryset = MenuItem.objects.all()
     serializer_class = MenuItemSerializer
     permission_classes = [IsSingleManagerOrNot]

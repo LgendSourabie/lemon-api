@@ -1,18 +1,25 @@
-from rest_framework.permissions import IsAuthenticated
 from lemon_menuitems.models import Cart
+from lemon_orders.filters import OrderFilter
 from lemon_orders.models import Order, OrderItem
-from django.contrib.auth.models import Group
+
 from lemon_orders.serializers import OrderSerializer, OrderItemSerializer
 from rest_framework import generics
 from django.http import Http404
 from rest_framework import status
 from rest_framework.response import Response
+from lemon_orders.paginations import OrderPagination
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
 # Create your views here.
 
 
 class OrderView(generics.ListCreateAPIView):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
+    pagination_class = OrderPagination
+    filter_backends = [DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter]
+    filterset_class = OrderFilter
+    ordering_fields = ['date', 'status','total']
 
     def get_serializer_context(self):
         return {"request":self.request}
