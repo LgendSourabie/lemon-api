@@ -27,7 +27,6 @@ class OrderView(generics.ListCreateAPIView):
         return {"request":self.request}
 
 
-
     def filter_orders(self, user):
         is_user_manager = user.groups.filter(name = "Manager").exists()
         is_user_delivery_crew = user.groups.filter(name = "Delivery crew").exists()
