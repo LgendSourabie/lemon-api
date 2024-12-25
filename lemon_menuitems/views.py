@@ -2,7 +2,7 @@ from rest_framework.permissions import IsAuthenticated
 from lemon_menuitems.models import Cart, Category,MenuItem
 from lemon_menuitems.serializers import MenuItemSerializer, CartSerializer, CategorySerializer
 from rest_framework import generics
-from lemon_menuitems.permissions import IsManagerOrNot, IsSingleManagerOrNot, IsCustomerOrNot, IsSingleCustomerOrNot
+from lemon_menuitems.permissions import IsManagerOrNot, IsSingleManagerOrNot, IsCustomerOrNot
 from django.http import Http404
 from rest_framework import status
 from rest_framework import filters
@@ -19,9 +19,24 @@ class MenuItemView(generics.ListCreateAPIView):
     filter_backends = [DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter]
     filterset_class = MenuItemFilter
     pagination_class = MenuItemPagination
-    search_fields = ['title','category']
+    search_fields = ['title','category__title']
     ordering_fields = ['price']
     permission_classes = [IsManagerOrNot]
+
+
+    def post(self, request, *args, **kwargs):
+
+        serializer = MenuItemSerializer(data = request.data)
+
+        is_user_manager = request.user.groups.filter(name = "Manager").exists()
+        is_user_delivery_crew = request.user.groups.filter(name = "Delivery crew").exists()
+
+        if is_user_delivery_crew or is_user_manager:
+            return Response(serializer.errors, status=status.HTTP_403_FORBIDDEN)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
 
     
 
@@ -42,11 +57,51 @@ class SingleMenuItemView(generics.RetrieveUpdateDestroyAPIView):
         menu_item = self.get_model_or_404(menu_item)
         serializer = MenuItemSerializer(menu_item,context={"request":request} )
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    def delete(self, request, menu_item):
+        is_user_manager = request.user.groups.filter(name = "Manager").exists()
+
+        if is_user_manager:
+            menu_item = self.get_model_or_404(menu_item)
+            menu_item.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"You don't have any permission for this"}, status=status.HTTP_403_FORBIDDEN)
+        
+
+    def put(self, request,menu_item):
+
+        is_user_manager = request.user.groups.filter(name = "Manager").exists()
+        menu_item = self.get_model_or_404(menu_item)
+        serializer = MenuItemSerializer(menu_item,data = request.data)
+
+        if is_user_manager:
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"You don't have any permission for this"}, status=status.HTTP_403_FORBIDDEN)
+
+
+    def patch(self, request,menu_item):
+
+        is_user_manager = request.user.groups.filter(name = "Manager").exists()
+
+        menu_item = self.get_model_or_404(menu_item)
+        serializer = MenuItemSerializer(menu_item,data = request.data, partial = True)
+
+        if is_user_manager:
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"You don't have any permission for this"}, status=status.HTTP_403_FORBIDDEN)
+
 
 
 class CategoryView(generics.ListCreateAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+    permission_classes = [IsAuthenticated]
 
 class SingleCategoryView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Category.objects.all()
@@ -54,7 +109,7 @@ class SingleCategoryView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsManagerOrNot]
 
 
-class CartView(generics.ListCreateAPIView):
+class CartView(generics.ListCreateAPIView, generics.DestroyAPIView):
     queryset = Cart.objects.all()
     serializer_class = CartSerializer
     permission_classes = [IsAuthenticated & IsCustomerOrNot]
@@ -69,15 +124,7 @@ class CartView(generics.ListCreateAPIView):
         if serializer.is_valid():
             serializer.save(user = self.request.user)
 
-
-class SingleCartView(generics.RetrieveDestroyAPIView):
-    queryset = Cart.objects.all()
-    serializer_class = CartSerializer
-    permission_classes = [IsSingleCustomerOrNot]
-
     def delete(self, request, *args, **kwargs):
 
         Cart.objects.filter(user = request.user).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    
-

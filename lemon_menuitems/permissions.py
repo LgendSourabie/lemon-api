@@ -25,19 +25,8 @@ class IsCustomerOrNot(permissions.BasePermission):
         is_not_manager = not is_user_in_group(request=request, group_name='Manager')
         is_not_delivery_crew = not is_user_in_group(request=request, group_name='Delivery crew')
 
-        if request.method in ['GET','POST']:
+        if request.method in ['GET','POST', 'DELETE']:
             return bool(is_not_delivery_crew and is_not_manager)
-
-class IsSingleCustomerOrNot(permissions.BasePermission):
-
-    def has_object_permission(self, request, view, obj):
-
-        is_not_manager = not is_user_in_group(request=request, group_name='Manager')
-        is_not_delivery_crew = not is_user_in_group(request=request, group_name='Delivery crew')
-
-        if request.method == 'DELETE':
-            is_owner = bool(request.user and obj.user == request.user)
-            return bool(is_owner and is_not_manager and is_not_delivery_crew)
 
 
 

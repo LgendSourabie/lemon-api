@@ -22,6 +22,7 @@ urlpatterns = [
     path('',include('lemon_authentication.urls')),
     path('',include('lemon_orders.urls')),
     path('',include('lemon_menuitems.urls')),
+    path('auth',include('rest_framework.urls')),
     path('api/', include('djoser.urls')), 
     path('', include('djoser.urls.authtoken')), 
 ]
